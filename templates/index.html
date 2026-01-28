@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpeedTest Pro</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+<div class="container">
+    <h2>Network Speed Test</h2>
+    
+    <button type="button" onclick="iniciarTeste()" class="btn-test" id="mainBtn">
+        <i class="fas fa-play"></i> INICIAR TESTE
+    </button>
+
+    <div class="results-grid" id="resultsArea" style="display: none;">
+        <div class="card">
+            <i class="fas fa-download"></i>
+            <small>DOWNLOAD</small>
+            <span class="card-val" id="dl-val">0.00</span><span class="unit">Mbps</span>
+        </div>
+        
+        <div class="card">
+            <i class="fas fa-upload"></i>
+            <small>UPLOAD</small>
+            <span class="card-val" id="ul-val">0.00</span><span class="unit">Mbps</span>
+        </div>
+        
+        <div class="card full-width">
+            <i class="fas fa-bolt"></i>
+            <small>PING / LATÊNCIA</small>
+            <span class="card-val" id="ping-val">0</span><span class="unit">ms</span>
+        </div>
+    </div>
+
+    <div class="log-container">
+        <div class="log-header">
+            <i class="fas fa-terminal"></i> Activity Log
+        </div>
+        <div class="log-body" id="logBody">
+            <div class="log-line">> Aguardando início...</div>
+        </div>
+    </div>
+</div>
+
+<script>
+function iniciarTeste() {
+    const logBody = document.getElementById('logBody');
+    const btn = document.getElementById('mainBtn');
+    const resultsArea = document.getElementById('resultsArea');
+    
+    logBody.innerHTML = ""; 
+    btn.disabled = true;
+    btn.innerHTML = "<i class='fas fa-spinner fa-spin'></i> TESTANDO...";
+
+    const eventSource = new EventSource('/testar_stream');
+
+    eventSource.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+
+        if (data.log) {
+            const line = document.createElement('div');
+            line.className = 'log-line';
+            line.innerText = "> " + data.log;
+            logBody.appendChild(line);
+            logBody.scrollTop = logBody.scrollHeight;
+        }
+
+        if (data.final) {
+            resultsArea.style.display = 'grid';
+            document.getElementById('dl-val').innerText = data.download;
+            document.getElementById('ul-val').innerText = data.upload;
+            document.getElementById('ping-val').innerText = data.ping;
+            
+            btn.disabled = false;
+            btn.innerHTML = "<i class='fas fa-redo'></i> REPETIR TESTE";
+            eventSource.close();
+        }
+    };
+
+    eventSource.onerror = function() {
+        eventSource.close();
+        btn.disabled = false;
+        btn.innerText = "ERRO - TENTAR NOVAMENTE";
+    };
+}
+</script>
+</body>
+</html>
